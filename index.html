@@ -1,67 +1,81 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8">
-<title>XAU/USD Smart AI Signals</title>
-<style>
-  body { font-family: Arial, sans-serif; background:#0f172a; color:#e6eef8; display:flex; justify-content:center; align-items:center; height:100vh; }
-  .container { background:#1e293b; padding:20px; border-radius:12px; text-align:center; width:360px; }
-  h1 { font-size:20px; margin-bottom:10px; }
-  .signal { font-size:18px; margin:10px 0; padding:10px; border-radius:8px; transition: all 0.5s ease; }
-  .buy { background:#10b981; color:white; }
-  .sell { background:#ef4444; color:white; }
-</style>
+  <meta charset="UTF-8">
+  <title>XAU/USD Realtime Signaal Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#0f172a; color:#e6eef8; display:flex; justify-content:center; align-items:center; height:100vh; }
+    .container { background:#1e293b; padding:20px; border-radius:12px; text-align:center; width:400px; }
+    h1 { font-size:22px; margin-bottom:20px; }
+    .signal { font-size:20px; margin:12px 0; padding:15px; border-radius:10px; transition: all 0.5s ease; }
+    .buy { background:#10b981; color:white; }
+    .sell { background:#ef4444; color:white; }
+    .neutral { background:#64748b; color:white; }
+  </style>
 </head>
 <body>
-<div class="container">
-  <h1>XAU/USD Smart Signal Viewer</h1>
-  <div id="M1" class="signal"></div>
-  <div id="M5" class="signal"></div>
-  <div id="M15" class="signal"></div>
-</div>
+  <div class="container">
+    <h1>XAU/USD Realtime Signaal</h1>
+    <div id="M1" class="signal">Laden…</div>
+    <div id="M5" class="signal">Laden…</div>
+    <div id="M15" class="signal">Laden…</div>
+  </div>
 
-<script>
-// Functie die “slimme” percentages berekent
-function smartSignal(tf) {
-    // Basis trend (simuleer: -1 = down, 0 = sideways, 1 = up)
-    let trend = Math.floor(Math.random() * 3) - 1;
+  <script>
+    const API_KEY = 'JOUW_FINNHUB_API_KEY_HIER'; // Vul hier jouw Finnhub API‑key in
+    const SYMBOL = 'OANDA:XAUUSD'; // Valutapaar
+    const TIMEFRAMES = {
+      M1: '1',
+      M5: '5',
+      M15: '15'
+    };
 
-    // RSI-achtige score 0-100
-    let rsi = Math.floor(Math.random() * 100);
+    async function fetchCandle(tf) {
+      const now = Math.floor(Date.now() / 1000);
+      const from = now - (parseInt(tf) * 60 * 2); // 2 candles terug
+      const resolution = tf;
+      const url = `https://finnhub.io/api/v1/forex/candle?symbol=${SYMBOL}&resolution=${resolution}&from=${from}&to=${now}&token=${API_KEY}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      return data;
+    }
 
-    // MA crossover effect: versterkt trend richting
-    let maEffect = Math.floor(Math.random() * 15); // 0-15% extra in trendrichting
+    function analyzeData(candleData) {
+      // Eenvoudige logica voor signaal: laatste close t.o.v vorige close
+      if (!candleData || candleData.s !== 'ok') return 'neutral';
+      const closes = candleData.c;
+      const len = closes.length;
+      if (len < 2) return 'neutral';
+      const last = closes[len - 1];
+      const prev = closes[len - 2];
+      if (last > prev * 1.001) return 'buy';    // > +0.1% op candle → koop
+      if (last < prev * 0.999) return 'sell';   // < ‑0.1% → verkoop
+      return 'neutral';
+    }
 
-    // Volatiliteit effect
-    let volatility = Math.floor(Math.random() * 10) - 5; // -5% tot +5%
+    function updateSignalElement(tf, direction) {
+      const div = document.getElementById(tf);
+      div.className = `signal ${direction}`;
+      const percent = direction === 'buy' ? 70 : direction === 'sell' ? 70 : 50;
+      const label = direction === 'buy' ? 'KOOP' : direction === 'sell' ? 'VERKOOP' : 'NEUTRAAL';
+      div.innerHTML = `${tf}: ${label} ~${percent}% kans`;
+    }
 
-    // Basiskoop kans
-    let buyChance = 50 + trend*10 + (rsi<30?15:(rsi>70?-15:0)) + maEffect + volatility;
-    if (buyChance > 95) buyChance = 95;
-    if (buyChance < 5) buyChance = 5;
-    let sellChance = 100 - buyChance;
-
-    return {buy: buyChance, sell: sellChance};
-}
-
-// Update signaaltableau
-function updateSignals() {
-    ['M1','M5','M15'].forEach(tf => {
-        const s = smartSignal(tf);
-        const div = document.getElementById(tf);
-        if(s.buy > s.sell){
-            div.className = 'signal buy';
-            div.innerHTML = `${tf}: KOOP ${s.buy}% / Verkoop ${s.sell}%`;
-        } else {
-            div.className = 'signal sell';
-            div.innerHTML = `${tf}: Verkoop ${s.sell}% / KOOP ${s.buy}%`;
+    async function updateAll() {
+      for (const [tf, res] of Object.entries(TIMEFRAMES)) {
+        try {
+          const data = await fetchCandle(res);
+          const signal = analyzeData(data);
+          updateSignalElement(tf, signal);
+        } catch(err) {
+          console.error('Fout bij ophalen/verwerken', tf, err);
         }
-    });
-}
+      }
+    }
 
-// Init en interval elke 3 seconden
-updateSignals();
-setInterval(updateSignals, 3000);
-</script>
+    // Init + interval
+    updateAll();
+    setInterval(updateAll, 60 * 1000); // elke minuut
+  </script>
 </body>
 </html>
