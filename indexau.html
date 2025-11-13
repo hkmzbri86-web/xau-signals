@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>XAU/USD — Live buy/sell signalen (M1, M5, M15)</title>
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 0; background:#0f172a; color:#e6eef8; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .wrap { width: 980px; max-width:95%; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04)); padding:18px; border-radius:12px; box-shadow: 0 10px 30px rgba(2,6,23,0.6); }
+    h1 { margin:0 0 10px 0; font-size:18px; letter-spacing:0.2px }
+    p.lead { margin:0 0 14px 0; color:#9fb1d6; font-size:13px }
+    .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; align-items:start; }
+    .card { background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00)); padding:10px; border-radius:10px; min-height:150px; }
+    .footer { margin-top:12px; font-size:12px; color:#95a6c6 }
+    .note { margin-top:8px; font-size:12px; color:#c7d7f2 }
+    @media (max-width:720px){ .grid{ grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>XAU / USD — realtime signaaltableau</h1>
+    <p class="lead">Druk overzicht: koop / verkoop / neutral voor XAUUSD op timeframes M1, M5 en M15 (TradingView technical summary widgets).</p>
+
+    <div class="grid">
+      <div class="card" id="card-m1">
+        <div id="tv_technical_m1"></div>
+        <div class="note">Timeframe: 1 minuut (M1)</div>
+      </div>
+      <div class="card" id="card-m5">
+        <div id="tv_technical_m5"></div>
+        <div class="note">Timeframe: 5 minuten (M5)</div>
+      </div>
+      <div class="card" id="card-m15">
+        <div id="tv_technical_m15"></div>
+        <div class="note">Timeframe: 15 minuten (M15)</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Tip: combineer deze snelle signalen met jouw ICT-regels (order blocks / fair value gaps / liquidity). Als je wilt kan ik ook een Pine Script schrijven dat FVG/order blocks markeert in TradingView.
+    </div>
+  </div>
+
+  <!-- TradingView Technical Analysis widget scripts -->
+  <!-- We gebruiken drie instanties met verschillende "interval" waardes -->
+  <script type="text/javascript">
+    (function loadWidget(targetId, intervalLabel){
+      const container = document.getElementById(targetId);
+      if(!container) return;
+      container.innerHTML = '';
+      const widget = document.createElement('div');
+      widget.className = 'tradingview-widget-container';
+      widget.style.minWidth = '100%';
+      widget.style.height = '120px';
+      widget.innerHTML = `
+        <div id="${targetId}_inner"></div>
+      `;
+      container.appendChild(widget);
+
+      // Create script element for TradingView widget
+      const s = document.createElement('script');
+      s.type = 'text/javascript';
+      s.async = true;
+      s.innerHTML = `
+        new TradingView.MediumWidget({
+          "symbols": [
+            [
+              "XAU/USD",
+              "OANDA:XAUUSD|1m"
+            ]
+          ],
+          "chartOnly": false,
+          "width": "100%",
+          "height": "120",
+          "locale": "en",
+          "colorTheme": "dark",
+          "gridLineColor": "#2a2a2a",
+          "trendLineColor": "#4b8bfd",
+          "fontColor": "#e6eef8",
+          "underLineColor": "#1a273b",
+          "isTransparent": true,
+          "autosize": true,
+          "showFloatingTooltip": false,
+          "interval": "${intervalLabel}",
+          "container_id": "${targetId}_inner"
+        });
+      `;
+      container.appendChild(s);
+    })( /* nothing */ );
+  </script>
+
+  <!-- TradingView library (remote) -->
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+  <script>
+    // When library loads, instantiate three widgets with intervals
+    function makeAll(){
+      // remove previous created children (if any)
+      const m1 = document.getElementById('tv_technical_m1');
+      const m5 = document.getElementById('tv_technical_m5');
+      const m15 = document.getElementById('tv_technical_m15');
+
+      // Insert simple placeholders (TradingView's MediumWidget supports an 'interval' config)
+      // We use the global TradingView object once it's ready.
+      const tryCreate = function(){
+        if(typeof TradingView === 'undefined' || !TradingView.MediumWidget){
+          // try again shortly
+          setTimeout(tryCreate, 300);
+          return;
+        }
+        // Clear content then build widgets by calling library directly
+        m1.innerHTML = '';
+        m5.innerHTML = '';
+        m15.innerHTML = '';
+
+        new TradingView.MediumWidget({
+          "symbols": [["XAUUSD","OANDA:XAUUSD|1"]],
+          "chartOnly": false,
+          "width": "100%",
+          "height": "120",
+          "locale": "en",
+          "colorTheme": "dark",
+          "isTransparent": true,
+          "interval": "1",
+          "container_id": "tv_technical_m1"
+        });
+
+        new TradingView.MediumWidget({
+          "symbols": [["XAUUSD","OANDA:XAUUSD|5"]],
+          "chartOnly": false,
+          "width": "100%",
+          "height": "120",
+          "locale": "en",
+          "colorTheme": "dark",
+          "isTransparent": true,
+          "interval": "5",
+          "container_id": "tv_technical_m5"
+        });
+
+        new TradingView.MediumWidget({
+          "symbols": [["XAUUSD","OANDA:XAUUSD|15"]],
+          "chartOnly": false,
+          "width": "100%",
+          "height": "120",
+          "locale": "en",
+          "colorTheme": "dark",
+          "isTransparent": true,
+          "interval": "15",
+          "container_id": "tv_technical_m15"
+        });
+      };
+
+      tryCreate();
+    }
+
+    // Start after a short delay to let tv.js load
+    window.addEventListener('load', function(){ setTimeout(makeAll, 600); });
+
+    // Optional: refresh widgets every 30 seconds by rebuilding (keeps data fresh)
+    setInterval(function(){
+      makeAll();
+    }, 30 * 1000);
+  </script>
+</body>
+</html>
